@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    # Disable database port exposure in production
+    ports: []
+    restart: unless-stopped
+
+  redis:
+    # Disable redis port exposure in production
+    ports: []
+    restart: unless-stopped
+
+  backend:
+    # Disable direct backend API port exposure in production
+    ports: []
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+
+  celery_worker:
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+
+  frontend:
+    # Disable direct frontend SPA port exposure in production
+    ports: []
+    restart: unless-stopped
+
+  nginx:
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443" # SSL support for production Webhook URLs
