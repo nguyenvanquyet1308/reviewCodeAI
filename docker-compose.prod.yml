@@ -30,6 +30,6 @@ services:
 
   nginx:
     restart: unless-stopped
+    # Bind to localhost:8080 to proxy requests from the host Nginx with SSL
     ports:
-      - "80:80"
-      - "443:443" # SSL support for production Webhook URLs
+      - "127.0.0.1:8080:80"

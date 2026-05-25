@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Typography, Button, Space, message } from 'antd';
-import { GithubOutlined, LinkOutlined, RefreshOutlined } from '@ant-design/icons';
+import { GithubOutlined, LinkOutlined } from '@ant-design/icons';
 import client from '../api/client';
 import { RepositoryItem } from '../types/review';
 
@@ -84,7 +84,7 @@ export const RepositoryPage: React.FC = () => {
           </Title>
           <Text type="secondary">List of GitHub repositories active and tracked via incoming webhooks.</Text>
         </div>
-        <Button type="primary" icon={<RefreshOutlined />} onClick={fetchRepositories} loading={loading}>
+        <Button type="primary" onClick={fetchRepositories} loading={loading}>
           Reload
         </Button>
       </div>

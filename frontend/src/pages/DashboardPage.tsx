@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Statistic, Space, Input, Select, Button, Typography, message } from 'antd';// Correcting imports to 'antd' instead of 'react-redux'!
-import { SearchOutlined, CheckCircleOutlined, CloseCircleOutlined, AlertOutlined, FileTextOutlined, RefreshOutlined } from '@ant-design/icons';
+import { SearchOutlined, CheckCircleOutlined, CloseCircleOutlined, AlertOutlined, FileTextOutlined } from '@ant-design/icons';
 import client from '../api/client';
 import { ReviewJobItem } from '../types/review';
 import { ReviewTable } from '../components/ReviewTable';
@@ -69,7 +69,7 @@ export const DashboardPage: React.FC = () => {
           </Title>
           <Text type="secondary">Real-time AI automated review statistics and tasks queue monitoring.</Text>
         </div>
-        <Button type="primary" icon={<RefreshOutlined />} onClick={fetchJobs} loading={loading}>
+        <Button type="primary" onClick={fetchJobs} loading={loading}>
           Reload
         </Button>
       </div>

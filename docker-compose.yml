@@ -6,9 +6,9 @@ services:
     container_name: review_postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_review
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_review}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,7 +28,7 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       - APP_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ai_review
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_review}
       - REDIS_URL=redis://redis:6379/0
       # Provide keys below or inject via .env
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -50,7 +50,7 @@ services:
     command: celery -A app.workers.celery_app worker --loglevel=info
     environment:
       - APP_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ai_review
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_review}
       - REDIS_URL=redis://redis:6379/0
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}

@@ -1,0 +1,13 @@
+.env
+.env.production
+.env.local
+*.log
+__pycache__/
+node_modules/
+.pytest_cache/
+dist/
+build/
+.venv/
+venv/
+env/
+postgres_data/
