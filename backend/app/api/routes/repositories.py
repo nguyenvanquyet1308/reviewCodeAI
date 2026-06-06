@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
@@ -5,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 from app.db.session import get_db
 from app.models.repository import Repository
@@ -20,7 +22,7 @@ class RepositoryListResponse(BaseModel):
     review_count: int
     last_reviewed_at: Optional[datetime] = None
 
-@router.get("", response_model=List[RepositoryListResponse])
+@router.get("/", response_model=List[RepositoryListResponse])
 def list_repositories(db: Session = Depends(get_db)):
     """
     Retrieve all repositories registered via webhooks,

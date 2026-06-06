@@ -29,19 +29,77 @@ Tài liệu này hướng dẫn chi tiết cách triển khai hệ thống **AI 
 
 ---
 
-## Bước 1: Kết nối VPS & Cập nhật hệ thống
+## Bước 1: Kết nối VPS, Cấu hình Bảo mật & Cập nhật hệ thống
 
-Mở Terminal trên máy tính cá nhân của bạn (macOS/Linux) hoặc PowerShell/Git Bash (Windows) và chạy lệnh:
+### 1.1. Kết nối ban đầu & Cập nhật hệ thống
+Mở Terminal trên máy tính cá nhân của bạn (macOS/Linux) hoặc PowerShell/Git Bash (Windows) và chạy lệnh để đăng nhập bằng quyền `root`:
 
 ```bash
 # Thay thế root và địa chỉ IP bằng thông tin VPS của bạn
 ssh root@your_vps_ip
 ```
 
-Sau khi đăng nhập thành công, hãy cập nhật tất cả gói phần mềm hệ thống lên phiên bản mới nhất:
+Sau khi đăng nhập thành công, hãy cập nhật tất cả các gói phần mềm hệ thống:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
+```
+
+### 1.2. Tạo người dùng mới có quyền quản trị (Sudoer)
+*Khuyến nghị bảo mật:* Tuyệt đối không nên thao tác trực tiếp bằng tài khoản `root` cho môi trường production. Chúng ta sẽ tạo một user mới (ví dụ: `deployer`) để làm việc:
+
+```bash
+# 1. Tạo người dùng mới (Nhập mật khẩu an toàn khi được hỏi)
+sudo adduser deployer
+
+# 2. Cấp quyền quản trị sudo cho người dùng mới
+sudo usermod -aG sudo deployer
+
+# 3. Sao chép SSH Authorized Keys từ root sang user mới để hỗ trợ đăng nhập không mật khẩu
+sudo mkdir -p /home/deployer/.ssh
+sudo cp ~/.ssh/authorized_keys /home/deployer/.ssh/
+sudo chown -R deployer:deployer /home/deployer/.ssh
+sudo chmod 700 /home/deployer/.ssh
+sudo chmod 600 /home/deployer/.ssh/authorized_keys
+```
+
+### 1.3. Cấu hình bảo mật SSH (Vô hiệu hóa root & password)
+Để bảo vệ VPS khỏi các cuộc tấn công brute-force quét cổng mặc định:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+Tìm và chỉnh sửa các dòng sau để vô hiệu hóa đăng nhập trực tiếp qua `root` và buộc sử dụng SSH Key:
+```text
+PermitRootLogin no
+PasswordAuthentication no
+```
+*(Nếu dòng nào có dấu `#` phía trước, hãy xóa dấu `#` đi)*.
+
+Lưu file (Ctrl+O -> Enter) và thoát (Ctrl+X). Khởi động lại dịch vụ SSH:
+```bash
+sudo systemctl restart ssh
+```
+
+> [!WARNING]
+> **Quan trọng:** Đừng tắt session Terminal hiện tại. Hãy mở một cửa sổ Terminal mới trên máy cá nhân và đăng nhập thử bằng user mới:
+> `ssh deployer@your_vps_ip`
+> Nếu đăng nhập thành công, bạn có thể đóng session `root` và tiếp tục sử dụng user mới.
+
+### 1.4. Thiết lập tường lửa UFW (Firewall)
+Chỉ cho phép các kết nối hợp lệ đi vào VPS:
+
+```bash
+# 1. Cho phép SSH (Mặc định cổng 22)
+sudo ufw allow OpenSSH
+
+# 2. Cho phép lưu lượng Web (Cổng HTTP 80 & HTTPS 443)
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# 3. Kích hoạt tường lửa
+sudo ufw enable
 ```
 
 ---
@@ -72,11 +130,17 @@ docker --version
 docker compose version
 ```
 
-Đảm bảo Docker tự động khởi động cùng hệ thống:
+Đảm bảo Docker tự động khởi động cùng hệ thống và phân quyền cho user của bạn chạy lệnh Docker không cần tiền tố `sudo`:
 
 ```bash
 sudo systemctl enable docker
 sudo systemctl start docker
+
+# Thêm user hiện tại (ví dụ: deployer) vào nhóm docker
+sudo usermod -aG docker $USER
+
+# Áp dụng thay đổi nhóm ngay lập tức
+newgrp docker
 ```
 
 ---
@@ -91,7 +155,11 @@ Nếu code của bạn đã được đẩy lên GitHub/GitLab ở dạng Privat
 # Cài đặt git nếu chưa có
 sudo apt install git -y
 
-# Clone repo về thư mục /var/www hoặc thư mục home
+# Tạo thư mục và phân quyền cho user hiện tại (tránh lỗi permission denied trong /var/www)
+sudo mkdir -p /var/www/review-app
+sudo chown -R $USER:$USER /var/www/review-app
+
+# Clone repo về thư mục đã phân quyền
 cd /var/www
 git clone <URL_KHO_MÃ_NGUỒN_CỦA_BẠN> review-app
 cd review-app
@@ -330,8 +398,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 Để sao lưu dữ liệu trong container Postgres:
 
 ```bash
-# Sao lưu dữ liệu ra file backup.sql trên VPS
-docker exec -t review_postgres pg_dumpall -c -U app_db_admin > backup.sql
+# Sao lưu dữ liệu ra file backup.sql trên VPS (dùng -i thay vì -t để tránh lỗi định dạng terminal khi chuyển hướng)
+docker exec -i review_postgres pg_dumpall -c -U app_db_admin > backup.sql
 ```
 
 Để khôi phục dữ liệu từ file backup:
@@ -376,13 +444,10 @@ Sao chép toàn bộ nội dung xuất hiện (bao gồm cả dòng `-----BEGIN 
 1. Trên kho mã nguồn GitHub của bạn, chọn **Settings** (Cài đặt) -> **Secrets and variables** -> **Actions**.
 2. Nhấn nút **New repository secret** để thêm các biến sau:
    *   `VPS_HOST`: Điền địa chỉ IP Public của VPS của bạn (ví dụ: `123.45.67.89`).
-   *   `VPS_USER`: Điền user đăng nhập (thường là `root`).
+   *   `VPS_USER`: Điền user đăng nhập (ví dụ: `deployer` hoặc `root` tùy cấu hình của bạn).
    *   `VPS_SSH_KEY`: Dán toàn bộ nội dung **Private Key** đã copy ở bước 9.2.
    *   `VPS_PORT` *(Tùy chọn)*: Điền cổng SSH của VPS nếu bạn thay đổi cổng mặc định (mặc định là `22` nếu không điền).
 
 Từ bây giờ, quy trình deploy của bạn sẽ hoàn toàn tự động! Mỗi khi bạn chạy `git push origin main`, chỉ cần đợi khoảng 2-3 phút, phiên bản mới nhất sẽ tự động cập nhật lên VPS.
-
 ---
-Chúc bạn triển khai thành công! Nếu gặp bất kỳ khó khăn nào trong quá trình cài đặt, hãy kiểm tra logs của `celery_worker` để xem thông báo lỗi chi tiết từ OpenAI API hoặc GitHub API.
-
 Chúc bạn triển khai thành công! Nếu gặp bất kỳ khó khăn nào trong quá trình cài đặt, hãy kiểm tra logs của `celery_worker` để xem thông báo lỗi chi tiết từ OpenAI API hoặc GitHub API.

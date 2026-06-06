@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, ConfigDict
 
 class ReviewJobBase(BaseModel):
